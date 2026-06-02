@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Beyond Vision — Air Quality</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root {
+--hue: 142;
+--bg: #0a0f0d;
+--surface: rgba(255,255,255,0.04);
+--surface2: rgba(255,255,255,0.07);
+--border: rgba(255,255,255,0.08);
+--text: #e8f0eb;
+--sub: rgba(232,240,235,0.5);
+--accent: #4ade80;
+--accent-dim: rgba(74,222,128,0.15);
+--ring-color: #4ade80;
+--glow: rgba(74,222,128,0.2);
+--danger: #f87171;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+
+body {
+font-family:'Outfit',sans-serif;
+background: var(--bg);
+color: var(--text);
+min-height: 100vh;
+overflow-x: hidden;
+transition: background 1.4s ease;
+position: relative;
+}
+
+.orb {
+position: fixed;
+border-radius: 50%;
+filter: blur(80px);
+pointer-events: none;
+z-index: 0;
+transition: background 1.4s ease, opacity 1.4s ease;
+}
+.orb1 {
+width: 500px; height: 500px;
+top: -100px; left: -100px;
+background: radial-gradient(circle, rgba(74,222,128,0.12), transparent 70%);
+animation: drift1 18s ease-in-out infinite alternate;
+}
+.orb2 {
+width: 400px; height: 400px;
+bottom: -80px; right: -80px;
+background: radial-gradient(circle, rgba(74,222,128,0.08), transparent 70%);
+animation: drift2 22s ease-in-out infinite alternate;
+}
+@keyframes drift1 { from{transform:translate(0,0) scale(1);} to{transform:translate(60px,40px) scale(1.1);} }
+@keyframes drift2 { from{transform:translate(0,0) scale(1);} to{transform:translate(-40px,-60px) scale(1.15);} }
+
+body::after {
+content:"";
+position:fixed;inset:0;
+background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+pointer-events:none;z-index:1;opacity:0.6;
+}
+
+.particles {
+position:fixed;inset:0;z-index:0;pointer-events:none;
+opacity:0;transition:opacity 1.5s ease;
+}
+.particles.active{opacity:1;}
+.particle {
+position:absolute;
+border-radius:50%;
+background: rgba(200,150,80,0.18);
+animation: floatP linear infinite;
+}
+@keyframes floatP {
+from{transform:translateY(110vh) scale(0.5);}
+to{transform:translateY(-10vh) scale(1.2);}
+}
+
+.wrap {
+max-width:520px;
+margin: 0 auto;
+padding: 32px 18px 80px;
+position:relative;z-index:10;
+}
+
+header {
+text-align:center;
+margin-bottom: 36px;
+animation: fadeUp 0.7s ease both;
+}
+header .eyebrow {
+font-size: 10px;
+letter-spacing: 4px;
+text-transform: uppercase;
+color: var(--accent);
+margin-bottom: 8px;
+font-weight: 500;
+}
+header h1 {
+font-family:'Cormorant Garamond',serif;
+font-size: 42px;
+font-weight: 300;
+letter-spacing: -0.5px;
+line-height:1;
+color: var(--text);
+}
+header h1 em { font-style: italic; color: var(--accent); }
+
+.search-wrap {
+position:relative;
+margin-bottom: 24px;
+animation: fadeUp 0.7s 0.1s ease both;
+}
+.search-icon {
+position:absolute;left:18px;top:50%;transform:translateY(-50%);
+opacity:0.35;pointer-events:none;
+color: var(--text);
+}
+.search-bar {
+width:100%;
+padding:16px 18px 16px 50px;
+background: var(--surface2);
+border: 1px solid var(--border);
+border-radius: 16px;
+color: var(--text);
+font-size:15px;
+font-family:'Outfit',sans-serif;
+outline:none;
+transition: border-color 0.2s, box-shadow 0.2s;
+backdrop-filter: blur(10px);
+}
+.search-bar::placeholder{color:rgba(232,240,235,0.28);}
+.search-bar:focus {
+border-color: rgba(74,222,128,0.4);
+box-shadow: 0 0 0 4px rgba(74,222,128,0.07);
+}
+.suggestions {
+position:absolute;top:calc(100% + 8px);left:0;right:0;
+background: rgba(16,24,20,0.95);
+backdrop-filter: blur(24px);
+border: 1px solid var(--border);
+border-radius: 16px;
+overflow:hidden;
+z-index:200;
+display:none;
+box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.suggestions.active{display:block;}
+.sug-item {
+padding:13px 18px;
+font-size:14px;
+cursor:pointer;
+display:flex;align-items:center;gap:10px;
+color:var(--text);
+border-bottom:1px solid var(--border);
+transition:background 0.15s;
+}
+.sug-item:last-child{border-bottom:none;}
+.sug-item:hover{background:var(--surface2);}
+.sug-dot {
+width:7px;height:7px;border-radius:50%;
+background:var(--accent);opacity:0.5;flex-shrink:0;
+}
+
+.error-banner {
+display:none;background:rgba(248,113,113,0.1);
+border:1px solid rgba(248,113,113,0.2);
+border-radius:14px;padding:13px 18px;
+font-size:13px;color:#fca5a5;margin-bottom:16px;
+text-align:center;
+}
+.error-banner.active{display:block;}
+
+.action-section {
+margin-bottom: 24px;
+animation: fadeUp 0.7s 0.15s ease both;
+}
+.toggle-btn {
+width: 100%; padding: 14px; 
+background: var(--surface2); 
+color: var(--text); 
+border: 1px solid var(--border); 
+border-radius: 16px; 
+cursor: pointer; 
+font-size: 14px; 
+font-weight: 500; 
+font-family: 'Outfit', sans-serif; 
+transition: all 0.3s ease; 
+backdrop-filter: blur(10px);
+margin-bottom: 10px;
+}
+.toggle-btn:hover { border-color: var(--accent); }
+
+#map {
+height: 400px; width: 100%; 
+border-radius: 16px; 
+border: 1px solid var(--border); 
+margin-bottom: 14px; 
+display: none; 
+z-index: 1;
+}
+
+#chart-container {
+display: none; background: var(--surface); 
+border: 1px solid var(--border); 
+border-radius: 16px; padding: 20px; 
+margin-bottom: 14px; backdrop-filter: blur(10px); 
+box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.aqi-card {
+background: var(--surface);
+border: 1px solid var(--border);
+border-radius: 28px;
+padding: 36px 28px 30px;
+margin-bottom: 14px;
+position:relative;overflow:hidden;
+animation: fadeUp 0.7s 0.2s ease both;
+transition: border-color 0.8s ease;
+}
+.aqi-card::before {
+content:"";
+position:absolute;inset:0;border-radius:28px;
+background: radial-gradient(ellipse at 50% 0%, var(--glow) 0%, transparent 60%);
+pointer-events:none;
+transition: background 1.4s ease;
+}
+.loading-veil {
+position:absolute;inset:0;border-radius:28px;
+background:rgba(10,15,13,0.7);
+backdrop-filter:blur(6px);
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+gap:14px;z-index:20;
+opacity:0;pointer-events:none;
+transition:opacity 0.3s;
+}
+.loading-veil.active{opacity:1;pointer-events:all;}
+.spinner {
+width:36px;height:36px;border-radius:50%;
+border:2px solid rgba(255,255,255,0.08);
+border-top-color: var(--accent);
+animation:spin 0.75s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.loading-veil p{font-size:13px;opacity:0.45;letter-spacing:0.5px;}
+
+.card-meta {
+display:flex;justify-content:space-between;align-items:center;
+margin-bottom:28px;
+}
+.city-name {
+font-size:13px;
+font-weight:500;
+letter-spacing:2.5px;
+text-transform:uppercase;
+color:var(--accent);
+}
+.updated-at {
+font-size:11px;
+color:var(--sub);
+letter-spacing:0.3px;
+}
+
+.ring-wrap {
+display:flex;
+align-items:center;justify-content:center;
+margin-bottom:24px;
+gap:32px;
+}
+.ring-container {
+position:relative;
+width:160px;height:160px;flex-shrink:0;
+}
+.ring-svg {
+width:160px;height:160px;
+transform:rotate(-90deg);
+}
+.ring-track {
+fill:none;
+stroke:rgba(255,255,255,0.06);
+stroke-width:10;
+}
+.ring-fill {
+fill:none;
+stroke: var(--ring-color);
+stroke-width:10;
+stroke-linecap:round;
+stroke-dasharray:408;
+stroke-dashoffset:408;
+transition: stroke-dashoffset 1.4s cubic-bezier(0.34,1.2,0.64,1), stroke 0.8s ease;
+filter: drop-shadow(0 0 6px var(--glow));
+}
+.ring-center {
+position:absolute;inset:0;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+}
+.aqi-number {
+font-family:'Cormorant Garamond',serif;
+font-size:64px;
+font-weight:300;
+line-height:1;
+color:var(--text);
+transition:color 0.8s;
+animation: numPop 0.6s ease both;
+}
+@keyframes numPop{from{opacity:0;transform:scale(0.85);}to{opacity:1;transform:scale(1);}}
+.aqi-label {
+font-size:10px;letter-spacing:2px;text-transform:uppercase;
+color:var(--sub);margin-top:2px;
+}
+
+.status-col {
+flex:1;
+text-align:left;
+}
+.status-pill {
+display:inline-flex;align-items:center;gap:6px;
+padding:6px 14px;border-radius:50px;
+font-size:13px;font-weight:600;letter-spacing:0.3px;
+background:var(--accent-dim);
+color:var(--accent);
+border:1px solid rgba(74,222,128,0.2);
+margin-bottom:12px;
+transition:background 0.8s,color 0.8s,border-color 0.8s;
+}
+.pill-dot {
+width:6px;height:6px;border-radius:50%;
+background:var(--accent);
+box-shadow:0 0 5px var(--accent);
+animation: pulse 2s ease infinite;
+transition:background 0.8s,box-shadow 0.8s;
+}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+.status-desc {
+font-size:14px;line-height:1.65;
+color:var(--sub);
+font-weight:300;
+}
+
+.pollutants-title {
+font-size:10px;letter-spacing:3px;text-transform:uppercase;
+color:var(--sub);margin-bottom:12px;
+border-top:1px solid var(--border);
+padding-top:22px;
+}
+.pollutant-grid {
+display:grid;grid-template-columns:repeat(3,1fr);gap:10px;
+}
+.p-item {
+background:var(--surface2);
+border:1px solid var(--border);
+border-radius:16px;
+padding:14px 12px;
+text-align:center;
+transition:border-color 0.6s;
+}
+.p-item .p-label {
+font-size:10px;letter-spacing:1.5px;text-transform:uppercase;
+color:var(--sub);margin-bottom:6px;
+}
+.p-item .p-val {
+font-family:'Cormorant Garamond',serif;
+font-size:28px;font-weight:300;
+color:var(--text);
+transition:color 0.6s;
+}
+
+.health-card {
+background:var(--surface);
+border:1px solid var(--border);
+border-radius:28px;padding:28px;
+margin-bottom:24px;
+animation:fadeUp 0.7s 0.3s ease both;
+}
+.health-card h2 {
+font-family:'Cormorant Garamond',serif;
+font-size:26px;font-weight:300;
+margin-bottom:18px;
+display:flex;align-items:center;gap:10px;
+}
+.health-card h2 span{font-size:13px;letter-spacing:3px;text-transform:uppercase;color:var(--accent);font-family:'Outfit',sans-serif;}
+.h-row {
+display:flex;align-items:flex-start;gap:14px;
+padding:16px;
+background:var(--surface2);
+border:1px solid var(--border);
+border-radius:16px;
+margin-bottom:10px;
+transition:border-color 0.6s;
+}
+.h-row:last-child{margin-bottom:0;}
+.h-icon{font-size:22px;flex-shrink:0;margin-top:1px;}
+.h-text strong {
+display:block;font-size:10px;letter-spacing:2px;text-transform:uppercase;
+color:var(--sub);margin-bottom:5px;font-weight:600;
+}
+.h-text p{font-size:14px;line-height:1.6;color:var(--text);font-weight:300;}
+
+@keyframes fadeUp {
+from{opacity:0;transform:translateY(20px);}
+to{opacity:1;transform:translateY(0);}
+}
+</style>
+</head>
+<body>
+
+<div class="orb orb1"></div>
+<div class="orb orb2"></div>
+<div class="particles" id="particles"></div>
+
+<div class="wrap">
+<header>
+<div class="eyebrow">Real-Time Air Intelligence</div>
+<h1>Beyond <em>Vision</em></h1>
+</header>
+
+<div class="search-wrap">
+<svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+<input type="text" class="search-bar" id="search-bar"
+placeholder="Search any global city..."
+autocomplete="off" spellcheck="false">
+<div class="suggestions" id="suggestions"></div>
+</div>
+
+<div class="error-banner" id="error-banner"></div>
+
+<div class="action-section">
+    <button id="map-toggle" class="toggle-btn">🗺️ Open Live Air Quality Map</button>
+    <div id="map"></div>
+    
+    <button id="chart-toggle" class="toggle-btn">📊 View 7-Day PM2.5 Forecast</button>
+    <div id="chart-container">
+        <canvas id="aqiChart" style="width: 100%; height: 220px;"></canvas>
+    </div>
+</div>
+
+<div class="aqi-card" id="aqi-card">
+<div class="loading-veil active" id="loading">
+<div class="spinner"></div>
+<p>Reading the air…</p>
+</div>
+<div class="card-meta">
+<div class="city-name" id="city-name">Delhi</div>
+<div class="updated-at" id="updated-at">—</div>
+</div>
+<div class="ring-wrap">
+<div class="ring-container">
+<svg class="ring-svg" viewBox="0 0 160 160">
+<circle class="ring-track" cx="80" cy="80" r="65"/>
+<circle class="ring-fill" id="ring-fill" cx="80" cy="80" r="65"/>
+</svg>
+<div class="ring-center">
+<div class="aqi-number" id="aqi-val">—</div>
+<div class="aqi-label">AQI</div>
+</div>
+</div>
+<div class="status-col">
+<div class="status-pill" id="status-pill">
+<span class="pill-dot" id="pill-dot"></span>
+<span id="status-text">Loading</span>
+</div>
+<p class="status-desc" id="status-desc">Fetching live air quality data…</p>
+</div>
+</div>
+<div class="pollutants-title">Pollutants μg/m³</div>
+<div class="pollutant-grid">
+<div class="p-item"><div class="p-label">PM2.5</div><div class="p-val" id="pm25">—</div></div>
+<div class="p-item"><div class="p-label">PM10</div><div class="p-val" id="pm10">—</div></div>
+<div class="p-item"><div class="p-label">NO₂</div><div class="p-val" id="no2">—</div></div>
+<div class="p-item"><div class="p-label">SO₂</div><div class="p-val" id="so2">—</div></div>
+<div class="p-item"><div class="p-label">CO</div><div class="p-val" id="co">—</div></div>
+<div class="p-item"><div class="p-label">O₃</div><div class="p-val" id="o3">—</div></div>
+</div>
+</div>
+
+<div class="health-card">
+<h2><span>Health</span> Intelligence</h2>
+<div class="h-row">
+<div class="h-icon">🏃</div>
+<div class="h-text"><strong>Outdoor Activity</strong><p id="h-outdoor">—</p></div>
+</div>
+<div class="h-row">
+<div class="h-icon">📚</div>
+<div class="h-text"><strong>Students</strong><p id="h-student">—</p></div>
+</div>
+<div class="h-row">
+<div class="h-icon">⚠️</div>
+<div class="h-text"><strong>Sensitive Groups</strong><p id="h-sensitive">—</p></div>
+</div>
+</div>
+
+<div style="display: flex; gap: 10px; margin-bottom: 24px; animation: fadeUp 0.7s 0.35s ease both;">
+    <button onclick="shareReport('whatsapp')" style="flex: 1; padding: 14px; border-radius: 16px; border: 1px solid #25D36640; background: #25D36615; color: #25D366; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#25D36630'" onmouseout="this.style.background='#25D36615'">
+        💬 WhatsApp Share
+    </button>
+    <button onclick="shareReport('twitter')" style="flex: 1; padding: 14px; border-radius: 16px; border: 1px solid #1DA1F240; background: #1DA1F215; color: #1DA1F2; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#1DA1F230'" onmouseout="this.style.background='#1DA1F215'">
+        🐦 Share on X
+    </button>
+</div>
+
+<div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); animation: fadeUp 0.7s 0.4s ease both;">
+    <p style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--sub); margin-bottom: 14px;">Engineered by Rehan</p>
+    <a href="YOUR_LINKEDIN_URL_HERE" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0077b520; color: #0077b5; text-decoration: none; border: 1px solid #0077b550; border-radius: 50px; font-size: 13px; font-weight: 500; transition: all 0.3s ease;" onmouseover="this.style.background='#0077b540'" onmouseout="this.style.background='#0077b520'">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+        Connect on LinkedIn
+    </a>
+</div>
+
+</div>
+
+<script>
+const KEY = '81469784d7a9397860d29c80a049b346f668e056';
+const BASE = 'https://api.waqi.info';
+let currentCity = 'Delhi';
+
+const LEVELS = [
+{ max:50, label:'Excellent', color:'#4ade80', glow:'rgba(74,222,128,0.22)', bg:'rgba(74,222,128,0.06)', desc:'Air quality is pristine.', outdoor:'Perfect conditions.', student:'Throw open windows!', sensitive:'Zero risk.' },
+{ max:100, label:'Moderate', color:'#facc15', glow:'rgba(250,204,21,0.22)', bg:'rgba(250,204,21,0.06)', desc:'Air is acceptable.', outdoor:'Generally safe.', student:'Normal routine is fine.', sensitive:'Unusually sensitive people beware.' },
+{ max:150, label:'Unhealthy (Sens)', color:'#fb923c', glow:'rgba(251,146,60,0.22)', bg:'rgba(251,146,60,0.06)', desc:'Sensitive groups at risk.', outdoor:'Healthy adults are fine.', student:'Keep windows partially closed.', sensitive:'Stay indoors.' },
+{ max:200, label:'Unhealthy', color:'#f87171', glow:'rgba(248,113,113,0.22)',bg:'rgba(248,113,113,0.06)', desc:'Everyone may feel effects.', outdoor:'Avoid prolonged exertion.', student:'Seal windows.', sensitive:'All sensitive groups indoors.' },
+{ max:300, label:'Very Unhealthy', color:'#c084fc', glow:'rgba(192,132,252,0.22)',bg:'rgba(192,132,252,0.06)', desc:'Health alert.', outdoor:'Avoid all outdoor activities.', student:'Use an air purifier.', sensitive:'Stay indoors.' },
+{ max:9999, label:'Hazardous', color:'#f43f5e', glow:'rgba(244,63,94,0.22)', bg:'rgba(244,63,94,0.06)', desc:'Emergency conditions.', outdoor:'TOTAL BAN on outdoor activity.', student:'Do not open windows.', sensitive:'Remain completely indoors.' },
+];
+
+function getLevel(aqi) { return LEVELS.find(l => aqi <= l.max) || LEVELS[LEVELS.length-1]; }
+
+function jsonp(url) {
+    return new Promise((resolve, reject) => {
+        const cb = 'wq_' + Date.now() + '_' + Math.floor(Math.random()*1e6);
+        const s = document.createElement('script');
+        const timer = setTimeout(() => { cleanup(); reject(new Error('Request timed out.')); }, 10000);
+        window[cb] = data => { cleanup(); resolve(data); };
+        s.onerror = () => { cleanup(); reject(new Error('Network error.')); };
+        function cleanup() { clearTimeout(timer); delete window[cb]; s.parentNode && s.parentNode.removeChild(s); }
+        s.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cb;
+        document.head.appendChild(s);
+    });
+}
+
+async function fetchAQI(city) {
+    setLoading(true); hideError();
+    try {
+        const j = await jsonp(`${BASE}/feed/${encodeURIComponent(city)}/?token=${KEY}`);
+        if (j.status !== 'ok') throw new Error(j.data || 'City not found.');
+        
+        const d = j.data;
+        const aqi = typeof d.aqi === 'number' ? d.aqi : parseInt(d.aqi);
+        const cityLabel = (d.city?.name || city).split(',')[0].trim();
+        const time = d.time?.s || '';
+        const get = k => { const v = d.iaqi?.[k]?.v; return (v!=null) ? Math.round(v) : '—'; };
+        
+        document.getElementById('city-name').textContent = cityLabel;
+        document.getElementById('updated-at').textContent = time ? new Date(time).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) : '';
+        document.getElementById('pm25').textContent = get('pm25');
+        document.getElementById('pm10').textContent = get('pm10');
+        document.getElementById('no2').textContent = get('no2');
+        document.getElementById('so2').textContent = get('so2');
+        document.getElementById('co').textContent = get('co');
+        document.getElementById('o3').textContent = get('o3');
+        
+        applyTheme(aqi);
+        
+        // Feed the chart data
+        if (typeof updateChartData === 'function') {
+            updateChartData(d.forecast?.daily?.pm25);
+        }
+        
+    } catch(e) {
+        showError(e.message || 'Could not fetch data.');
+    } finally {
+        setLoading(false);
+    }
+}
+
+function applyTheme(aqi) {
+    const lv = getLevel(aqi);
+    const r = document.documentElement.style;
+    r.setProperty('--accent', lv.color);
+    r.setProperty('--accent-dim', lv.bg);
+    r.setProperty('--ring-color', lv.color);
+    r.setProperty('--glow', lv.glow);
+    document.querySelector('.orb1').style.background = `radial-gradient(circle, ${lv.glow}, transparent 70%)`;
+    document.querySelector('.orb2').style.background = `radial-gradient(circle, ${lv.glow}, transparent 70%)`;
+  
+    document.getElementById('aqi-val').textContent = aqi;
+    document.getElementById('status-text').textContent = lv.label;
+    document.getElementById('status-desc').textContent = lv.desc;
+    document.getElementById('h-outdoor').textContent = lv.outdoor;
+    document.getElementById('h-student').textContent = lv.student;
+    document.getElementById('h-sensitive').textContent = lv.sensitive;
+  
+    const offset = 408 - (408 * (Math.min(aqi, 400) / 400));
+    document.getElementById('ring-fill').style.strokeDashoffset = offset;
+}
+
+function setLoading(b) { document.getElementById('loading').classList.toggle('active', b); }
+function showError(msg) { const e=document.getElementById('error-banner'); e.textContent=msg; e.classList.toggle('active', !!msg); }
+function hideError() { showError(''); }
+
+document.getElementById('search-bar').addEventListener('keypress', e => {
+  if(e.key === 'Enter') { fetchAQI(e.target.value); }
+});
+
+// ==========================================
+// SHARE FEATURE LOGIC
+// ==========================================
+function shareReport(platform) {
+    const city = document.getElementById('city-name').textContent;
+    const aqi = document.getElementById('aqi-val').textContent;
+    const status = document.getElementById('status-text').textContent;
+    let alertIcon = aqi > 150 ? "🚨 HEALTH WARNING:" : "🌤️ AIR UPDATE:";
+    const message = `${alertIcon} The current air quality in ${city} is ${aqi} AQI (${status}). \n\nChecked in real-time via Beyond Vision.`;
+    
+    if (platform === 'whatsapp') {
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, '_blank');
+    } else if (platform === 'twitter') {
+        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(message)}`, '_blank');
+    }
+}
+
+// ==========================================
+// MAP LOGIC
+// ==========================================
+const mapToggle = document.getElementById('map-toggle');
+const mapContainer = document.getElementById('map');
+let mapInstance = null;
+
+mapToggle.addEventListener('click', function() {
+    if (mapContainer.style.display === 'none') {
+        mapContainer.style.display = 'block';
+        mapToggle.innerText = '❌ Close Live Map';
+        mapToggle.style.borderColor = 'var(--accent)';
+        mapToggle.style.color = 'var(--accent)';
+
+        if (!mapInstance) {
+            const script = document.createElement('script');
+            script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+            script.onload = function() {
+                mapInstance = L.map('map').setView([28.6139, 77.2090], 9); // Centered on Delhi
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
+                L.tileLayer(`https://tiles.waqi.info/tiles/usepa-aqi/{z}/{x}/{y}.png?token=${KEY}`).addTo(mapInstance);
+                mapInstance.invalidateSize();
+            };
+            document.head.appendChild(script);
+        } else {
+            mapInstance.invalidateSize();
+        }
+    } else {
+        mapContainer.style.display = 'none';
+        mapToggle.innerText = '🗺️ Open Live Air Quality Map';
+        mapToggle.style.borderColor = 'var(--border)';
+        mapToggle.style.color = 'var(--text)';
+    }
+});
+
+// ==========================================
+// CHART LOGIC
+// ==========================================
+const chartToggle = document.getElementById('chart-toggle');
+const chartContainer = document.getElementById('chart-container');
+let aqiChartInstance = null;
+let latestForecastData = [];
+
+chartToggle.addEventListener('click', function() {
+    if (chartContainer.style.display === 'none') {
+        chartContainer.style.display = 'block';
+        chartToggle.innerText = '❌ Close Forecast Chart';
+        chartToggle.style.borderColor = 'var(--accent)';
+        chartToggle.style.color = 'var(--accent)';
+        renderChart(); 
+    } else {
+        chartContainer.style.display = 'none';
+        chartToggle.innerText = '📊 View 7-Day PM2.5 Forecast';
+        chartToggle.style.borderColor = 'var(--border)';
+        chartToggle.style.color = 'var(--text)';
+    }
+});
+
+function updateChartData(forecastArray) {
+    if (!forecastArray) return;
+    latestForecastData = forecastArray.slice(0, 7);
+    if (chartContainer.style.display === 'block') { renderChart(); }
+}
+
+function renderChart() {
+    if (latestForecastData.length === 0) return;
+    const ctx = document.getElementById('aqiChart').getContext('2d');
+    const labels = latestForecastData.map(f => new Date(f.day).toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric' }));
+    const dataPoints = latestForecastData.map(f => f.avg);
+    const themeColor = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+
+    if (aqiChartInstance) {
+        aqiChartInstance.data.labels = labels;
+        aqiChartInstance.data.datasets[0].data = dataPoints;
+        aqiChartInstance.data.datasets[0].borderColor = themeColor;
+        aqiChartInstance.data.datasets[0].pointBorderColor = themeColor;
+        aqiChartInstance.update();
+    } else {
+        Chart.defaults.color = 'rgba(232, 240, 235, 0.6)';
+        Chart.defaults.font.family = "'Outfit', sans-serif";
+        
+        aqiChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Avg PM2.5',
+                    data: dataPoints,
+                    borderColor: themeColor,
+                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                    borderWidth: 2,
+                    pointBackgroundColor: '#0a0f0d',
+                    pointBorderColor: themeColor,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    fill: true,
+                    tension: 0.4 
+                }]
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(255, 255, 255, 0.05)' } }, x: { grid: { display: false } } } }
+        });
+    }
+}
+
+// Initial Boot Up
+fetchAQI('Delhi');
+
+</script>
+</body>
+</html>
