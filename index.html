@@ -506,6 +506,22 @@ to{opacity:1;transform:translateY(0);}
     </button>
 </div>
 
+<!-- Community Reviews Section HTML (Properly placed in body) -->
+<div class="health-card" id="reviews-section" style="margin-bottom: 24px;">
+    <h2><span>Community</span> Reviews</h2>
+    <button id="review-toggle" class="toggle-btn" style="margin-bottom: 14px;">💬 Open Community Reviews</button>
+    <div id="review-container" style="display: none; margin-top: 14px;">
+        <div style="margin-bottom: 16px;">
+            <input type="text" id="reviewer-name" placeholder="Your Name" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none;">
+            <textarea id="review-text" placeholder="Write your thoughts..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
+            <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Review</button>
+        </div>
+        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dynamic reviews load here -->
+        </div>
+    </div>
+</div>
+
 <div style="text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid var(--border); animation: fadeUp 0.7s 0.4s ease both;">
     <p style="font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--sub); margin-bottom: 14px;">Engineered by Rehan</p>
     <a href="YOUR_LINKEDIN_URL_HERE" target="_blank" style="display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; background: #0077b520; color: #0077b5; text-decoration: none; border: 1px solid #0077b550; border-radius: 50px; font-size: 13px; font-weight: 500; transition: all 0.3s ease;" onmouseover="this.style.background='#0077b540'" onmouseout="this.style.background='#0077b520'">
@@ -568,7 +584,6 @@ async function fetchAQI(city) {
         
         applyTheme(aqi);
         
-        // Feed the chart data
         if (typeof updateChartData === 'function') {
             updateChartData(d.forecast?.daily?.pm25);
         }
@@ -609,9 +624,25 @@ document.getElementById('search-bar').addEventListener('keypress', e => {
   if(e.key === 'Enter') { fetchAQI(e.target.value); }
 });
 
-// ==========================================
-// SHARE FEATURE LOGIC
-// ==========================================
+// --- GEOLOCATION FEATURE ---
+function getLocation() {
+    if (navigator.geolocation) {
+        document.getElementById('search-bar').value = "Locating...";
+        navigator.geolocation.getCurrentPosition(position => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            fetchAQI(`geo:${lat};${lon}`);
+            document.getElementById('search-bar').value = "Current Location";
+        }, error => {
+            alert("Location access denied. Please type your city manually.");
+            document.getElementById('search-bar').value = "";
+        });
+    } else {
+        alert("Geolocation is not supported by your browser.");
+    }
+}
+
+// --- SHARE FEATURE LOGIC ---
 function shareReport(platform) {
     const city = document.getElementById('city-name').textContent;
     const aqi = document.getElementById('aqi-val').textContent;
@@ -626,9 +657,7 @@ function shareReport(platform) {
     }
 }
 
-// ==========================================
-// MAP LOGIC
-// ==========================================
+// --- MAP LOGIC ---
 const mapToggle = document.getElementById('map-toggle');
 const mapContainer = document.getElementById('map');
 let mapInstance = null;
@@ -644,7 +673,7 @@ mapToggle.addEventListener('click', function() {
             const script = document.createElement('script');
             script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
             script.onload = function() {
-                mapInstance = L.map('map').setView([28.6139, 77.2090], 9); // Centered on Delhi
+                mapInstance = L.map('map').setView([28.6139, 77.2090], 9);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
                 L.tileLayer(`https://tiles.waqi.info/tiles/usepa-aqi/{z}/{x}/{y}.png?token=${KEY}`).addTo(mapInstance);
                 mapInstance.invalidateSize();
@@ -661,9 +690,7 @@ mapToggle.addEventListener('click', function() {
     }
 });
 
-// ==========================================
-// CHART LOGIC
-// ==========================================
+// --- CHART LOGIC ---
 const chartToggle = document.getElementById('chart-toggle');
 const chartContainer = document.getElementById('chart-container');
 let aqiChartInstance = null;
@@ -729,21 +756,7 @@ function renderChart() {
         });
     }
 }
-<div class="health-card" id="reviews-section" style="margin-bottom: 24px;">
-    <h2><span>Community</span> Reviews</h2>
-    <button id="review-toggle" class="toggle-btn" style="margin-bottom: 14px;">💬 Open Community Reviews</button>
-    <div id="review-container" style="display: none; margin-top: 14px;">
-        <div style="margin-bottom: 16px;">
-            <input type="text" id="reviewer-name" placeholder="Your Name" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none;">
-            <textarea id="review-text" placeholder="Write your thoughts..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
-            <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Review</button>
-        </div>
-        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 10px;">
-            <!-- Dynamic reviews load here -->
-        </div>
-    </div>
-</div>
-   
+
 // --- SEPARATE REVIEW SECTION LOGIC ---
 const reviewToggle = document.getElementById('review-toggle');
 const reviewContainer = document.getElementById('review-container');
@@ -751,10 +764,10 @@ const reviewContainer = document.getElementById('review-container');
 reviewToggle.addEventListener('click', () => {
     if (reviewContainer.style.display === 'block') {
         reviewContainer.style.display = 'none';
-        reviewToggle.textContent = '💬 Community Reviews';
+        reviewToggle.textContent = '💬 Open Community Reviews';
     } else {
         reviewContainer.style.display = 'block';
-        reviewToggle.textContent = '💬 Hide Reviews';
+        reviewToggle.textContent = '💬 Hide Community Reviews';
         loadReviews();
     }
 });
@@ -799,9 +812,9 @@ function postReview() {
 function escapeHtml(str) {
     return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
+
 // Initial Boot Up
 fetchAQI('Delhi');
-
 </script>
 </body>
 </html>
