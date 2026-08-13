@@ -729,7 +729,76 @@ function renderChart() {
         });
     }
 }
+<div class="health-card" id="reviews-section" style="margin-bottom: 24px;">
+    <h2><span>Community</span> Reviews</h2>
+    <button id="review-toggle" class="toggle-btn" style="margin-bottom: 14px;">💬 Open Community Reviews</button>
+    <div id="review-container" style="display: none; margin-top: 14px;">
+        <div style="margin-bottom: 16px;">
+            <input type="text" id="reviewer-name" placeholder="Your Name" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none;">
+            <textarea id="review-text" placeholder="Write your thoughts..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
+            <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Review</button>
+        </div>
+        <div id="reviews-list" style="display: flex; flex-direction: column; gap: 10px;">
+            <!-- Dynamic reviews load here -->
+        </div>
+    </div>
+</div>
+   
+// --- SEPARATE REVIEW SECTION LOGIC ---
+const reviewToggle = document.getElementById('review-toggle');
+const reviewContainer = document.getElementById('review-container');
 
+reviewToggle.addEventListener('click', () => {
+    if (reviewContainer.style.display === 'block') {
+        reviewContainer.style.display = 'none';
+        reviewToggle.textContent = '💬 Community Reviews';
+    } else {
+        reviewContainer.style.display = 'block';
+        reviewToggle.textContent = '💬 Hide Reviews';
+        loadReviews();
+    }
+});
+
+function loadReviews() {
+    const savedReviews = JSON.parse(localStorage.getItem('vision_reviews')) || [
+        { name: "Aarav", text: "The live tracking is incredibly fast and accurate." }
+    ];
+    const container = document.getElementById('reviews-list');
+    container.innerHTML = savedReviews.map(r => `
+        <div style="padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;">
+            <strong style="font-size: 13px; color: var(--accent); display: block; margin-bottom: 4px;">${escapeHtml(r.name)}</strong>
+            <p style="font-size: 13px; color: var(--sub); font-weight: 300; line-height: 1.5;">${escapeHtml(r.text)}</p>
+        </div>
+    `).join('');
+}
+
+function postReview() {
+    const nameInput = document.getElementById('reviewer-name');
+    const textInput = document.getElementById('review-text');
+    const name = nameInput.value.trim();
+    const text = textInput.value.trim();
+
+    if (!name || !text) {
+        alert("Please enter both your name and a review.");
+        return;
+    }
+
+    const newReview = { name, text };
+    const savedReviews = JSON.parse(localStorage.getItem('vision_reviews')) || [
+        { name: "Aarav", text: "The live tracking is incredibly fast and accurate." }
+    ];
+    
+    savedReviews.unshift(newReview);
+    localStorage.setItem('vision_reviews', JSON.stringify(savedReviews));
+
+    nameInput.value = '';
+    textInput.value = '';
+    loadReviews();
+}
+
+function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
 // Initial Boot Up
 fetchAQI('Delhi');
 
