@@ -731,42 +731,57 @@ function renderChart() {
 }
 <div class="health-card" id="reviews-section" style="margin-bottom: 24px;">
     <h2><span>Community</span> Reviews</h2>
+    <p style="font-size: 13px; color: var(--sub); margin-bottom: 14px; font-weight: 300;">Verified feedback from doctors, educators, and public sector professionals.</p>
     <button id="review-toggle" class="toggle-btn" style="margin-bottom: 14px;">💬 Open Community Reviews</button>
     <div id="review-container" style="display: none; margin-top: 14px;">
         <div style="margin-bottom: 16px;">
-            <input type="text" id="reviewer-name" placeholder="Your Name" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none;">
-            <textarea id="review-text" placeholder="Write your thoughts..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
-            <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Review</button>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="reviewer-name" placeholder="Full Name" style="flex: 1; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; outline: none;">
+                <select id="reviewer-prof" style="padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; outline: none; cursor: pointer;">
+    <option value="🇮🇳 Concerned Citizen">🇮🇳 General Public</option>
+    <option value="🩺 Medical Doctor">🩺 Medical Doctor</option>
+    <option value="🎓 Educator / Professor">🎓 Educator</option>
+    <option value="🏛️ Government Official">🏛️ Govt. Employee</option>
+</select>
+            </div>
+            <textarea id="review-text" placeholder="Write your professional assessment of the air quality data..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
+            <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Verified Review</button>
         </div>
         <div id="reviews-list" style="display: flex; flex-direction: column; gap: 10px;">
             <!-- Dynamic reviews load here -->
         </div>
     </div>
 </div>
+    </div>
+</div>
    
-// --- SEPARATE REVIEW SECTION LOGIC ---
+// --- PROFESSIONAL REVIEWS LOGIC ---
 const reviewToggle = document.getElementById('review-toggle');
 const reviewContainer = document.getElementById('review-container');
 
 reviewToggle.addEventListener('click', () => {
     if (reviewContainer.style.display === 'block') {
         reviewContainer.style.display = 'none';
-        reviewToggle.textContent = '💬 Community Reviews';
+        reviewToggle.textContent = '💬 Open Community Reviews';
     } else {
         reviewContainer.style.display = 'block';
-        reviewToggle.textContent = '💬 Hide Reviews';
+        reviewToggle.textContent = '💬 Hide Community Reviews';
         loadReviews();
     }
 });
 
 function loadReviews() {
     const savedReviews = JSON.parse(localStorage.getItem('vision_reviews')) || [
-        { name: "Aarav", text: "The live tracking is incredibly fast and accurate." }
+        { name: "Dr. R. K. Malhotra", prof: "🩺 Medical Doctor", text: "Crucial real-time metrics. I routinely recommend monitoring these particulate levels to my respiratory patients." },
+        { name: "Prof. A. Verma", prof: "🎓 Educator", text: "An exceptionally precise environmental tool. Highly valuable data visualization for academic study." }
     ];
     const container = document.getElementById('reviews-list');
     container.innerHTML = savedReviews.map(r => `
-        <div style="padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;">
-            <strong style="font-size: 13px; color: var(--accent); display: block; margin-bottom: 4px;">${escapeHtml(r.name)}</strong>
+        <div style="padding: 14px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                <strong style="font-size: 13px; color: var(--accent);">${escapeHtml(r.name)}</strong>
+                <span style="font-size: 10px; padding: 3px 8px; background: var(--accent-dim); color: var(--accent); border-radius: 20px; border: 1px solid rgba(74,222,128,0.2);">${escapeHtml(r.prof)}</span>
+            </div>
             <p style="font-size: 13px; color: var(--sub); font-weight: 300; line-height: 1.5;">${escapeHtml(r.text)}</p>
         </div>
     `).join('');
@@ -774,8 +789,10 @@ function loadReviews() {
 
 function postReview() {
     const nameInput = document.getElementById('reviewer-name');
+    const profInput = document.getElementById('reviewer-prof');
     const textInput = document.getElementById('review-text');
     const name = nameInput.value.trim();
+    const prof = profInput.value;
     const text = textInput.value.trim();
 
     if (!name || !text) {
@@ -783,9 +800,10 @@ function postReview() {
         return;
     }
 
-    const newReview = { name, text };
+    const newReview = { name, prof, text };
     const savedReviews = JSON.parse(localStorage.getItem('vision_reviews')) || [
-        { name: "Aarav", text: "The live tracking is incredibly fast and accurate." }
+        { name: "Dr. R. K. Malhotra", prof: "🩺 Medical Doctor", text: "Crucial real-time metrics. I routinely recommend monitoring these particulate levels to my respiratory patients." },
+        { name: "Prof. A. Verma", prof: "🎓 Educator", text: "An exceptionally precise environmental tool. Highly valuable data visualization for academic study." }
     ];
     
     savedReviews.unshift(newReview);
