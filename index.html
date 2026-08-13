@@ -783,9 +783,7 @@ reviewToggle.addEventListener('click', () => {
 
 function loadReviews() {
     const savedReviews = JSON.parse(localStorage.getItem('vision_reviews')) || [
-        { name: "Dr. R. K. Malhotra", prof: "🩺 Medical Doctor", text: "Crucial real-time metrics. I routinely recommend monitoring these particulate levels to my respiratory patients." },
-        { name: "Prof. A. Verma", prof: "🎓 Educator", text: "An exceptionally precise environmental tool. Highly valuable data visualization for academic study." }
-    ];
+        
     const container = document.getElementById('reviews-list');
     container.innerHTML = savedReviews.map(r => `
         <div style="padding: 14px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px;">
