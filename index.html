@@ -496,7 +496,19 @@ to{opacity:1;transform:translateY(0);}
 <div class="h-text"><strong>Sensitive Groups</strong><p id="h-sensitive">—</p></div>
 </div>
 </div>
-
+<div class="health-card" style="margin-bottom: 24px;">
+    <h2><span>Civic Impact</span> School & Sports Status</h2>
+    <p style="font-size: 13px; color: var(--sub); margin-bottom: 14px; font-weight: 300;">Automated guidance based on official GRAP and EPA safety protocols.</p>
+    
+    <div style="padding: 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 16px; display: flex; align-items: center; gap: 16px; transition: border-color 0.6s;">
+        <div id="school-icon" style="font-size: 32px;">🎒</div>
+        <div>
+            <strong id="school-status" style="display: block; font-size: 15px; color: var(--accent); margin-bottom: 4px; transition: color 0.6s;">Loading...</strong>
+            <p id="school-action" style="font-size: 13px; color: var(--sub); line-height: 1.5; font-weight: 300;">Fetching civic guidelines...</p>
+        </div>
+    </div>
+</div>
+    
 <div style="display: flex; gap: 10px; margin-bottom: 24px; animation: fadeUp 0.7s 0.35s ease both;">
     <button onclick="shareReport('whatsapp')" style="flex: 1; padding: 14px; border-radius: 16px; border: 1px solid #25D36640; background: #25D36615; color: #25D366; font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 15px; cursor: pointer; transition: 0.3s;" onmouseover="this.style.background='#25D36630'" onmouseout="this.style.background='#25D36615'">
         💬 WhatsApp Share
@@ -623,6 +635,43 @@ function applyTheme(aqi) {
   
     const offset = 408 - (408 * (Math.min(aqi, 400) / 400));
     document.getElementById('ring-fill').style.strokeDashoffset = offset;
+    // --- CIVIC IMPACT: SCHOOL & SPORTS STATUS LOGIC ---
+    let schoolIcon, schoolStatus, schoolAction;
+    
+    if (aqi <= 100) {
+        // EPA Green/Yellow: Safe
+        schoolIcon = "🎒";
+        schoolStatus = "All Clear for Outdoors";
+        schoolAction = "Morning assemblies and rigorous outdoor sports can proceed normally. No restrictions.";
+    } else if (aqi <= 200) {
+        // EPA Orange/Red: Caution
+        schoolIcon = "⚠️";
+        schoolStatus = "Caution for Sensitive Students";
+        schoolAction = "Short recesses are fine. Limit intense athletic practice. Asthmatic students must stay indoors.";
+    } else if (aqi <= 300) {
+        // GRAP Stage 1 / EPA Purple: Move Indoors
+        schoolIcon = "🛑";
+        schoolStatus = "Move Activities Indoors";
+        schoolAction = "Cancel outdoor morning assemblies. Move physical education (PE) and sports practice indoors.";
+    } else if (aqi <= 400) {
+        // GRAP Stage 2: Suspend
+        schoolIcon = "🚫";
+        schoolStatus = "Suspend Outdoor Activities (GRAP-II)";
+        schoolAction = "Mandatory suspension of all outdoor school activities. Implement a strict indoor routine only.";
+    } else {
+        // GRAP Stage 3/4: Severe/Emergency
+        schoolIcon = "🚨";
+        schoolStatus = "Health Emergency (GRAP-III/IV)";
+        schoolAction = "Hazardous conditions. Government mandates hybrid/remote learning or total school closures.";
+    }
+
+    // Inject the logic into the HTML
+    document.getElementById('school-icon').textContent = schoolIcon;
+    document.getElementById('school-status').textContent = schoolStatus;
+    document.getElementById('school-action').textContent = schoolAction;
+    
+    // Sync the status title color with the current AQI theme color
+    document.getElementById('school-status').style.color = lv.color;
 }
 
 function setLoading(b) { document.getElementById('loading').classList.toggle('active', b); }
