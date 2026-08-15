@@ -518,21 +518,24 @@ to{opacity:1;transform:translateY(0);}
     </button>
 </div>
 
-<!-- Community Reviews Section -->
-<div class="health-card" id="reviews-section" style="margin-bottom: 24px;">
-    <h2><span>Community</span> Reviews</h2>
-    <p style="font-size: 13px; color: var(--sub); margin-bottom: 14px; font-weight: 300;">Verified feedback from doctors, educators, and public sector professionals.</p>
-    <button id="review-toggle" class="toggle-btn" style="margin-bottom: 14px;">💬 Open Community Reviews</button>
-    <div id="review-container" style="display: none; margin-top: 14px;">
-        <div style="margin-bottom: 16px;">
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" id="reviewer-name" placeholder="Full Name" style="flex: 1; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; outline: none;">
-                <select id="reviewer-prof" style="padding: 12px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; outline: none; cursor: pointer;">
-                    <option value="🇮🇳 Concerned Citizen">🇮🇳 General Public</option>
-                    <option value="🩺 Medical Doctor">🩺 Medical Doctor</option>
-                    <option value="🎓 Educator / Professor">🎓 Educator</option>
-                    <option value="🏛️ Government Official">🏛️ Govt. Employee</option>
-                </select>
+<!-- Facebook Review & Connect Button -->
+<a href="https://www.facebook.com/profile.php?id=61593119319756" target="_blank" rel="noopener noreferrer" style="
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #16a34a; 
+    color: #ffffff;
+    padding: 12px 24px;
+    border-radius: 8px;
+    text-decoration: none;
+    font-family: 'Outfit', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+">
+    Leave a Review on Facebook
+</a>
             </div>
             <textarea id="review-text" placeholder="Write your professional assessment of the air quality data..." rows="3" style="width: 100%; padding: 12px 16px; background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-family: 'Outfit', sans-serif; margin-bottom: 10px; outline: none; resize: none;"></textarea>
             <button onclick="postReview()" style="width: 100%; padding: 12px; border-radius: 12px; background: var(--accent); color: #0a0f0d; border: none; font-family: 'Outfit', sans-serif; font-weight: 600; cursor: pointer; transition: 0.3s;">Post Verified Review</button>
